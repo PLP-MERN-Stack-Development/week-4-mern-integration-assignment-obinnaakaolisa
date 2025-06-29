@@ -8,7 +8,7 @@ import path from 'path';
 
 // Import routes
 import authRoutes from './routes/auth.js';
-//import postRoutes from './routes/posts.js';
+import postRoutes from './routes/posts.js';
 //import categoryRoutes from './routes/categories.js';
 
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
@@ -42,7 +42,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // API routes
 app.use('/api/auth', authRoutes);
-//app.use('/api/posts', postRoutes);
+app.use('/api/posts', postRoutes);
 //app.use('/api/categories', categoryRoutes);
 
 // Root route
