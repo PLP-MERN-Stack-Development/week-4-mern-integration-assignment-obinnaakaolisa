@@ -2,21 +2,23 @@
 import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
-import {connectDB} from './config/db.js';
+import { connectDB } from './config/db.js';
 import morgan from 'morgan';
 import path from 'path';
 
 // Import routes
-import postRoutes from './routes/posts.js';
-import categoryRoutes from './routes/categories.js';
 import authRoutes from './routes/auth.js';
+//import postRoutes from './routes/posts.js';
+//import categoryRoutes from './routes/categories.js';
+
+import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 
 // Load environment variables
 dotenv.config();
 
 // Initialize Express app
 const app = express();
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5003;
 
 // Set the directory for static files
 const __dirname = path.resolve();
@@ -39,9 +41,9 @@ if (process.env.NODE_ENV === 'development') {
 }
 
 // API routes
-app.use('/api/posts', postRoutes);
-app.use('/api/categories', categoryRoutes);
 app.use('/api/auth', authRoutes);
+//app.use('/api/posts', postRoutes);
+//app.use('/api/categories', categoryRoutes);
 
 // Root route
 app.get('/', (req, res) => {
@@ -49,13 +51,8 @@ app.get('/', (req, res) => {
 });
 
 // Error handling middleware
-app.use((err, req, res, next) => {
-  console.error(err.stack);
-  res.status(err.statusCode || 500).json({
-    success: false,
-    error: err.message || 'Server Error',
-  });
-});
+app.use(notFound);
+app.use(errorHandler);
 
 // Connect to the database and then start the server
 connectDB().then(() => {
