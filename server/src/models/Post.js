@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import slugify from 'slugify';
 
 const PostSchema = new mongoose.Schema(
   {
@@ -65,15 +66,14 @@ const PostSchema = new mongoose.Schema(
 );
 
 // Create slug from title before saving
-PostSchema.pre('save', function (next) {
+PostSchema.pre('validate', function (next) {
   if (!this.isModified('title')) {
     return next();
   }
-  
-  this.slug = this.title
-    .toLowerCase()
-    .replace(/[^\w ]+/g, '')
-    .replace(/ +/g, '-');
+
+  if (!this.slug && this.title) {
+    this.slug = slugify(this.title, { lower: true, strict: true });
+  }
     
   next();
 });

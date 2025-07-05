@@ -5,11 +5,13 @@ import dotenv from 'dotenv';
 import { connectDB } from './config/db.js';
 import morgan from 'morgan';
 import path from 'path';
+import { fileURLToPath } from 'url';
 
 // Import routes
 import authRoutes from './routes/auth.js';
 import postRoutes from './routes/posts.js';
 import categoryRoutes from './routes/categories.js';
+import uploadRoutes from './routes/uploadRoutes.js';
 
 import { notFound, errorHandler } from './middlewares/errorMiddleware.js';
 
@@ -21,7 +23,8 @@ const app = express();
 const PORT = process.env.PORT || 5003;
 
 // Set the directory for static files
-const __dirname = path.resolve();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Middleware
 app.use(cors());
@@ -44,6 +47,7 @@ if (process.env.NODE_ENV === 'development') {
 app.use('/api/auth', authRoutes);
 app.use('/api/posts', postRoutes);
 app.use('/api/categories', categoryRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 // Root route
 app.get('/', (req, res) => {
