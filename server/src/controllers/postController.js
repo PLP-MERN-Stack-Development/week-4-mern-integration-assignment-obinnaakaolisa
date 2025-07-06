@@ -157,3 +157,29 @@ export const addCommentToPost = async (req, res, next) => {
   }
 };
 
+export const deleteCommentFromPost = async (req, res, next) => {
+  try {
+    const { postId, commentId } = req.params;
+
+    const post = await Post.findById(postId).populate('comments.user', 'id name email');
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    const comment = post.comments.id(commentId);
+    if (!comment) return res.status(404).json({ message: 'Comment not found' });
+
+    const isOwner = comment.user._id.toString() === req.user._id.toString();
+    const isAdmin = req.user.isAdmin;
+
+    if (!isOwner && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorised to delete this comment' });
+    }
+
+    comment.deleteOne();
+    await post.save();
+
+    res.status(200).json({ message: 'Comment deleted successfully' });
+  } catch (err) {
+    next(err);
+  }
+};
+
