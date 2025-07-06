@@ -108,4 +108,37 @@ export const getPostsByCategory = async (req, res, next) => {
   }
 };
 
+export const addCommentToPost = async (req, res, next) => {
+  try {
+    const { content } = req.body;
+    const { id } = req.params;
+
+    if (!content || content.trim() === '') {
+      return res.status(400).json({ message: 'Comment is required' });
+    }
+
+    const post = await Post.findById(id);
+    if (!post) return res.status(404).json({ message: 'Post not found' });
+
+    // Push comment
+    post.comments.push({
+      user: req.user._id,
+      content,
+    });
+
+    await post.save();
+
+    const updatedPost = await Post.findById(id)
+      .populate('author', 'name')
+      .populate('category', 'name')
+      .populate('comments.user', 'name email');
+
+    res.status(201).json({
+      message: 'Comment added',
+      comments: updatedPost.comments,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
 
