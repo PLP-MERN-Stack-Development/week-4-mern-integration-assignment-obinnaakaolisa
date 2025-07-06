@@ -6,6 +6,7 @@ import {
     updatePost, 
     deletePost, 
     addCommentToPost, 
+    updateCommentOnPost, 
     deleteCommentFromPost 
 } from '../controllers/postController.js';
 import { protect } from '../middlewares/authMiddleware.js';
@@ -20,6 +21,7 @@ router.get('/:id', getPostById);
 router.put('/:id', protect, postValidationRules(), validateRequest, updatePost);
 router.delete('/:id', protect, postValidationRules(), validateRequest, deletePost);
 router.post('/:id/comments', protect, addCommentToPost);
+router.put('/:postId/comments/:commentId', protect, updateCommentOnPost);
 router.delete('/:postId/comments/:commentId', protect, deleteCommentFromPost);
 
 export default router;
