@@ -2,12 +2,40 @@ import Post from '../models/Post.js';
 
 export const getAllPosts = async (req, res, next) => {
   try {
-    const posts = await Post.find()
-      .populate('author', 'name email')
-      .populate('category', 'name')
-      .sort({ createdAt: -1 });
+    const { page = 1, limit = 10, category, q } = req.query;
 
-    res.json(posts);
+    const query = {};
+
+    //Search by keyword
+    if (q) {
+      query.$or = [
+        { title: { $regex: q, $options: 'i' } },
+        { content: { $regex: q, $options: 'i' } },
+      ];
+    }
+
+    // Filter by category ID
+    if (category) {
+      query.category = category;
+    }
+
+    // Count total documents for pagination
+    const total = await Post.countDocuments(query);
+
+    const posts = await Post.find(query)
+      .populate('author', 'name')
+      .populate('category', 'name')
+      .sort({ createdAt: -1 })
+      .skip((page - 1) * limit)
+      .limit(parseInt(limit));
+
+    res.json({
+      page: parseInt(page),
+      limit: parseInt(limit),
+      total,
+      totalPages: Math.ceil(total / limit),
+      posts,
+    });
   } catch (err) {
     next(err);
   }
@@ -90,19 +118,6 @@ export const deletePost = async (req, res, next) => {
 
     await post.remove();
     res.json({ message: 'Post deleted successfully' });
-  } catch (err) {
-    next(err);
-  }
-};
-
-export const getPostsByCategory = async (req, res, next) => {
-  try {
-    const posts = await Post.find({ category: req.params.categoryId })
-      .populate('author', 'name email')
-      .populate('category', 'name')
-      .sort({ createdAt: -1 });
-
-    res.json(posts);
   } catch (err) {
     next(err);
   }
