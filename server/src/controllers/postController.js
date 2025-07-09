@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import Post from '../models/Post.js';
 
 export const getAllPosts = async (req, res, next) => {
@@ -50,6 +51,30 @@ export const getPostById = async (req, res, next) => {
     if (!post) return res.status(404).json({ message: 'Post not found' });
 
     await post.incrementViewCount(); // Optional: track views
+    res.json(post);
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const getPostByIdOrSlug = async (req, res, next) => {
+  try {
+    const { idOrSlug } = req.params;
+
+    const isObjectId = mongoose.Types.ObjectId.isValid(idOrSlug);
+
+    const post = await Post.findOne(
+      isObjectId ? { _id: idOrSlug } : { slug: idOrSlug }
+    )
+      .populate('author', 'name email')
+      .populate('category', 'name');
+
+    if (!post) {
+      return res.status(404).json({ message: 'Post not found' });
+    }
+
+    await post.incrementViewCount(); // Optional: track views
+
     res.json(post);
   } catch (err) {
     next(err);
