@@ -1,135 +1,174 @@
-// api.js - API service for making requests to the backend
-import axios from 'axios';
+const API_BASE_URL = process.env.NODE_ENV === 'production' ? '/api' : 'http://localhost:3000/api';
 
-// Create axios instance with base URL
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5003/api',
-  headers: {
+// Helper function to get auth token
+const getAuthToken = () => {
+  return localStorage.getItem('auth_token');
+};
+
+// Helper function to make authenticated requests
+const makeAuthenticatedRequest = async (url, options = {}) => {
+  const token = getAuthToken();
+  const headers = {
     'Content-Type': 'application/json',
-  },
-});
+    ...options.headers,
+  };
 
-// Add request interceptor for authentication
-api.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => {
-    return Promise.reject(error);
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
   }
-);
 
-// Add response interceptor for error handling
-api.interceptors.response.use(
-  (response) => response,
-  (error) => {
-    // Handle authentication errors
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
-    }
-    return Promise.reject(error);
+  const response = await fetch(`${API_BASE_URL}${url}`, {
+    ...options,
+    headers,
+  });
+
+  if (!response.ok) {
+    throw new Error(`HTTP error! status: ${response.status}`);
   }
-);
 
-// Post API services
-export const postService = {
-  // Get all posts with optional pagination and filters
-  getAllPosts: async (page = 1, limit = 10, category = null) => {
-    let url = `/posts?page=${page}&limit=${limit}`;
-    if (category) {
-      url += `&category=${category}`;
-    }
-    const response = await api.get(url);
-    return response.data;
-  },
-
-  // Get a single post by ID or slug
-  getPost: async (idOrSlug) => {
-    const response = await api.get(`/posts/${idOrSlug}`);
-    return response.data;
-  },
-
-  // Create a new post
-  createPost: async (postData) => {
-    const response = await api.post('/posts', postData);
-    return response.data;
-  },
-
-  // Update an existing post
-  updatePost: async (id, postData) => {
-    const response = await api.put(`/posts/${id}`, postData);
-    return response.data;
-  },
-
-  // Delete a post
-  deletePost: async (id) => {
-    const response = await api.delete(`/posts/${id}`);
-    return response.data;
-  },
-
-  // Add a comment to a post
-  addComment: async (postId, commentData) => {
-    const response = await api.post(`/posts/${postId}/comments`, commentData);
-    return response.data;
-  },
-
-  // Search posts
-  searchPosts: async (query) => {
-    const response = await api.get(`/posts/search?q=${query}`);
-    return response.data;
-  },
+  return response.json();
 };
 
-// Category API services
-export const categoryService = {
-  // Get all categories
-  getAllCategories: async () => {
-    const response = await api.get('/categories');
-    return response.data;
-  },
-
-  // Create a new category
-  createCategory: async (categoryData) => {
-    const response = await api.post('/categories', categoryData);
-    return response.data;
-  },
-};
-
-// Auth API services
-export const authService = {
-  // Register a new user
+// Auth API
+export const authAPI = {
   register: async (userData) => {
-    const response = await api.post('/auth/register', userData);
-    return response.data;
+    const response = await fetch(`${API_BASE_URL}/auth/register`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(userData),
+    });
+    return response.json();
   },
 
-  // Login user
   login: async (credentials) => {
-    const response = await api.post('/auth/login', credentials);
-    if (response.data.token) {
-      localStorage.setItem('token', response.data.token);
-      localStorage.setItem('user', JSON.stringify(response.data.user));
+    const response = await fetch(`${API_BASE_URL}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(credentials),
+    });
+    const data = await response.json();
+    if (data.token) {
+      localStorage.setItem('auth_token', data.token);
     }
-    return response.data;
+    return data;
   },
 
-  // Logout user
   logout: () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
+    localStorage.removeItem('auth_token');
   },
 
-  // Get current user
-  getCurrentUser: () => {
-    const user = localStorage.getItem('user');
-    return user ? JSON.parse(user) : null;
+  isAuthenticated: () => {
+    return !!getAuthToken();
   },
 };
 
-export default api; 
+// Posts API
+export const postsAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/posts`);
+    return response.json();
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/posts/${id}`);
+    return response.json();
+  },
+
+  create: async (postData) => {
+    return makeAuthenticatedRequest('/posts', {
+      method: 'POST',
+      body: JSON.stringify(postData),
+    });
+  },
+
+  update: async (id, postData) => {
+    return makeAuthenticatedRequest(`/posts/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(postData),
+    });
+  },
+
+  delete: async (id) => {
+    return makeAuthenticatedRequest(`/posts/${id}`, {
+      method: 'DELETE',
+    });
+  },
+
+  // Comments
+  addComment: async (postId, commentData) => {
+    return makeAuthenticatedRequest(`/posts/${postId}/comments`, {
+      method: 'POST',
+      body: JSON.stringify(commentData),
+    });
+  },
+
+  updateComment: async (postId, commentId, commentData) => {
+    return makeAuthenticatedRequest(`/posts/${postId}/comments/${commentId}`, {
+      method: 'PUT',
+      body: JSON.stringify(commentData),
+    });
+  },
+
+  deleteComment: async (postId, commentId) => {
+    return makeAuthenticatedRequest(`/posts/${postId}/comments/${commentId}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Categories API
+export const categoriesAPI = {
+  getAll: async () => {
+    const response = await fetch(`${API_BASE_URL}/categories`);
+    return response.json();
+  },
+
+  getById: async (id) => {
+    const response = await fetch(`${API_BASE_URL}/categories/${id}`);
+    return response.json();
+  },
+
+  getByName: async (name) => {
+    const response = await fetch(`${API_BASE_URL}/categories/name/${name}`);
+    return response.json();
+  },
+
+  create: async (categoryData) => {
+    return makeAuthenticatedRequest('/categories', {
+      method: 'POST',
+      body: JSON.stringify(categoryData),
+    });
+  },
+
+  update: async (id, categoryData) => {
+    return makeAuthenticatedRequest(`/categories/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify(categoryData),
+    });
+  },
+
+  delete: async (id) => {
+    return makeAuthenticatedRequest(`/categories/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};
+
+// Upload API
+export const uploadAPI = {
+  uploadImage: async (imageFile) => {
+    const token = getAuthToken();
+    const formData = new FormData();
+    formData.append('image', imageFile);
+
+    const response = await fetch(`${API_BASE_URL}/upload`, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+      body: formData,
+    });
+
+    return response.json();
+  },
+};
