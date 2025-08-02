@@ -64,8 +64,9 @@ export const authAPI = {
 
 // Posts API
 export const postsAPI = {
-  getAll: async () => {
-    const response = await fetch(`${API_BASE_URL}/posts`);
+  getAll: async (params) => {
+    const queryString = params ? `?${params.toString()}` : '';
+    const response = await fetch(`${API_BASE_URL}/posts${queryString}`);
     return response.json();
   },
 

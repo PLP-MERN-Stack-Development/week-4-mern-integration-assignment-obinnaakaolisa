@@ -24,7 +24,7 @@ export const getAllPosts = async (req, res, next) => {
     const total = await Post.countDocuments(query);
 
     const posts = await Post.find(query)
-      .populate('author', 'name')
+      .populate('author', '_id name')
       .populate('category', 'name')
       .sort({ createdAt: -1 })
       .skip((page - 1) * limit)
